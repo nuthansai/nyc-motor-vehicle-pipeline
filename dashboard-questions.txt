@@ -1,0 +1,17 @@
+Date range: 1 year
+    Local pipeline: 2 months
+
+ ---- Risk questions (these answer "does weather change risk?")---
+
+1.Crash rate by weather condition and hour of day: crashes per weather-hour for each condition (dry, rain, snow, and so on), split by hour of day. Comparing rain vs dry at the same hour of day removes rush hour as a confound.
+2.Crash rate by precipitation intensity: crashes per weather-hour across bands of precipitation (none, light, moderate, heavy). It shows whether risk rises steadily with intensity or jumps at a threshold.
+3.Weather transitions: crash rate in the first hours after rain or snow begins, compared with later hours of the same event. This tests the idea that sudden changes catch drivers off guard.
+4.Temperature near freezing: crash rate by temperature band, with a close look at the band around 0°C, combined with precipitation.
+
+------Cause and outcome questions-------
+5.Contributing factors by weather condition: which contributing factors rise in which conditions (for example, factors related to slippery roads vs driver inattention). This links the weather data to the reasons officers recorded.
+6.Severity by weather: injury-or-fatal collision rate by weather condition, with counts shown beside the percentages.
+7.Who gets hurt: if the injury and death fields are split by pedestrians, cyclists, and motorists, show how that mix changes with weather.
+
+----Place questions------
+8.By borough: how the weather effect differs across boroughs, with the caveat that one city-wide weather point makes every borough share the same weather.

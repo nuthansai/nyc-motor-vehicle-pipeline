@@ -11,3 +11,6 @@ __pycache__/
 .ipynb_checkpoints/
 pyvenv.cfg
 *.ipynb
+data/
+notes.txt
+*Zone.Identifier*.zip

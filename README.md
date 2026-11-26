@@ -1,68 +1,70 @@
 # NYC Motor Vehicle Collisions + Weather Pipeline
 
-A data engineering project that joins NYC Motor Vehicle Collisions (NYC Open Data / Socrata) with Open-Meteo historical weather.
+A data engineering pipeline that joins NYC Motor Vehicle Collisions (NYC Open Data / Socrata) with Open-Meteo historical hourly weather data.
 
-**Status:** early exploration. Both APIs have been explored at a surface level. No pipeline is built yet.
+**Status:** Early exploration. Both APIs have been tested at a surface level; pipeline implementation is next.
 
-## Sources
+## Data Sources
 
-| Source | What it provides | Notes |
-|---|---|---|
-| NYC Open Data (Socrata): Motor Vehicle Collisions, Crashes | Police-reported crash events, one row per crash | Dataset ID: _TODO_ |
-| Open-Meteo Historical Weather API | Hourly historical weather | Variables: _TODO_ |
+| Source | What It Provides | Notes |
+| :--- | :--- | :--- |
+| **NYC Open Data (Socrata):** Motor Vehicle Collisions – Crashes | Police-reported crash events (one row per crash) | Dataset ID: `h9gi-nx95` *(verify before ingestion)* |
+| **Open-Meteo:** Historical Weather API (`/v1/archive`) | Hourly reanalysis weather per borough | Variables: `temperature_2m`, `precipitation`, `rain`, `snowfall`, `wind_gusts_10m`, `weather_code` |
 
-### About the collisions data
+### About the Collisions Data
 
-- **Grain:** one row per crash event.
-- **Coverage:** police-reported collisions only. A police report (MV-104AN) is required when someone is injured or killed, or when damage is at least $1000. This is not every collision in NYC.
-- **Preliminary data:** per the dataset description, rows are preliminary and may change when reports are amended.
-- **Timezone:** crash date/time are in New York local time.
+- **Grain:** One row per reported crash event (`collision_id`).
+- **Coverage:** Police-reported collisions only. An MV-104AN report is required only when someone is injured or killed, or when property damage is at least $1,000.
+- **Preliminary data:** Rows are preliminary and may be amended months later.
+- **Timezone:** Source timestamps are in New York local time (`America/New_York`) and remain in `America/New_York` at staging.
+
 
 ## Scope
 
-- In scope: collisions + weather.
-- Considered and left out for now: traffic volume, road infrastructure, potholes.
+- **In scope:** Collisions + hourly weather across all 5 NYC boroughs.
+- **Out of scope (for now):** Traffic volume, road infrastructure, potholes.
 
-## Data refresh approach
+## Data Refresh Approach
 
-- The collisions data is loaded as a **snapshot** as of a recorded pull date. Later amendments to source rows are not tracked.
-- Amendments are expected to appear only months to a year later, so no short lookback window is used.
-- The pull date and the Socrata `count(*)` on that date are recorded for reconciliation.
+- Collision records are loaded as a **snapshot** as of a recorded pull date; late amendments are not retroactively tracked.
+- Because amendments typically occur months to a year later, no rolling lookback window is used.
+- Both the pull date and Socrata's `count(*)` on that date are logged for reconciliation.
 
-## Planned stack
+## Planned Stack
 
-- **Local build:** Python extraction, Postgres, plain SQL first, then dbt models.
-- **Main pipeline:** Terraform, Kestra, dlt, dbt, AWS (S3 plus a query layer).
-- Not used: Spark, Kafka, Airflow.
+- **Local prototype:** Python extraction/loading, PostgreSQL, plain SQL transformations, then `dbt` models.
+- **Main pipeline:** Terraform, Kestra, `dlt`, `dbt`, AWS (S3 + Athena), and Amazon QuickSight.
+- **Warehouse layers:** `raw` → `stg` → `int` → `mart`
 
-## Engineering rules
+## Engineering Rules
 
-- Test each source before building on it: the same window pulled twice must give identical results, and row counts are compared against Socrata's own `count(*)`.
-- Staging uses UTC (NY local times are converted); DST transition days are tested.
-- Re-running a date window must give identical, deduplicated results (idempotent loads).
+- **Source verification:** Pulling the same date window twice must yield identical results, and ingested row counts must match Socrata's `count(*)`.
+- **Timezone & DST handling:** Staging standardizes all timestamps to UTC; DST transition days are explicitly tested.
+- **Idempotency:** Re-running any date window must produce identical, deduplicated results.
 
-## Open decisions
+## Decisions Summary
 
-- [ ] Dashboard questions
-- [ ] Date range
-- [ ] Weather granularity
-- [ ] Cadence and lag
-- [ ] Storage and query layer
-- [ ] Budget cap
-- [ ] Dashboard tool
+All items below are finalized (see `DECISIONS.md` for full context and rationale):
 
-## Source findings
+- [x] **Scope:** Collisions + weather only
+- [x] **Architecture:** 4 layers (`raw`, `stg`, `int`, `mart`)
+- [x] **Analytics:** Season-wise and month-wise dashboard questions finalized
+- [x] **Date ranges:** Main pipeline: `2025-09-01` to `2026-08-31` (1 year); Local prototype: `2025-10-01` to `2025-11-30` (2 months)
+- [x] **Weather granularity:** Hourly, 5 borough coordinates
+- [x] **Storage & query layer:** Amazon S3 + Amazon Athena
+- [x] **BI & visualization:** Amazon QuickSight
+- [x] **Orchestration & cadence:** Kestra monthly runs (incremental, latest completed month)
+- [x] **Timezone strategy:** Crashes in `America/New_York` at staging; weather in `UTC` at staging and converted to `America/New_York` downstream
 
-To be filled in as the source tests are run:
 
-| Item | Socrata | Open-Meteo |
-|---|---|---|
-| Unique key | collision_id per data dictionary | n/a |
-| Update field | Not documented | n/a |
-| Lookback window | None (snapshot approach, see above) | none |
-| Timestamp / timezone handling | NY local time | UTC and Timezone offset can be used |
-| Rate limits / terms | Requests with an application token are not throttled unless judged abusive or malicious (per Socrata docs). Limits without a token: Based on IP address for a given time period and exact limit not documented | 10000 daily |
+## Source Findings
 
-## Repository layout
+*To be expanded as source validation tests are completed:*
 
-_TODO: add once the code structure exists._
+| Attribute | Socrata (NYC MVC) | Open-Meteo (`/v1/archive`) |
+| :--- | :--- | :--- |
+| **Natural / Unique Key** | `collision_id` (per data dictionary) | `(borough, timestamp_utc)` |
+| **Update Timestamp Field** | Not documented | N/A (reanalysis archive) |
+| **Lookback Window** | None (snapshot approach) | None (5-day reanalysis lag from present) |
+| **Source Timezone** | `America/New_York` (local time) | `UTC` (`GMT` default) |
+| **Rate Limits & Terms** | Unthrottled with an App Token unless abusive; without a token, IP-based throttling applies (exact limit undocumented). | 10,000 API calls/day (non-commercial free tier) |
