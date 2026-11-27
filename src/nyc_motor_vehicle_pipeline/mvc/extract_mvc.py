@@ -14,7 +14,7 @@ def download_mvc():
     }
 
     try:
-        mvc_response = requests.get(MVC_BASE_URL, params=params, headers=headers, timeout=10)
+        mvc_response = requests.get(MVC_BASE_URL, params=params, headers=headers, timeout=10) # type: ignore
 
         mvc_response.raise_for_status()
 
@@ -33,13 +33,14 @@ def download_mvc():
         raise
 
     except requests.exceptions.HTTPError as e:
-        if mvc_response.status_code == 401:
+        status_code = e.response.status_code if e.response is not None else None
+        if status_code == 401:
             print("failed due to unauthorized api key")
             raise
-        elif mvc_response.status_code == 403:
+        elif status_code == 403:
             print("Access forbidden. Stopping extraction.")
             raise
-        elif mvc_response.status_code == 429:
+        elif status_code == 429:
             print("API rate limit reached")
             raise
 

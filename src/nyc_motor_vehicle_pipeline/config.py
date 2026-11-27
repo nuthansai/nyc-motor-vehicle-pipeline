@@ -14,4 +14,8 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 DATA_DIR = PROJECT_ROOT / 'data'
 
-print("DATA_DIR:", DATA_DIR)
+DB_HOST = os.getenv("DB_HOST")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+DB_PORT = os.getenv("DB_PORT")

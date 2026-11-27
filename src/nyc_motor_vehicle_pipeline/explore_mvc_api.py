@@ -1,6 +1,6 @@
 import json
 import requests
-from config import MVC_BASE_URL, MVC_APP_TOKEN
+from nyc_motor_vehicle_pipeline.config import MVC_BASE_URL, MVC_APP_TOKEN
 
 params= {
     "query": "SELECT * WHERE crash_date >= '2026-09-01T00:00:00.000' AND crash_date < '2026-10-02T00:00:00.000'",
@@ -14,7 +14,7 @@ try:
     response = requests.get(
         MVC_BASE_URL,
         params=params,
-        headers=headers
+        headers=headers # type: ignore
     )
 
     print(response.status_code)

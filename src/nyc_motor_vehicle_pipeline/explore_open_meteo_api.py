@@ -1,6 +1,6 @@
 import requests
 import json
-from config import OPEN_METEO_BASE_URL
+from nyc_motor_vehicle_pipeline.config import OPEN_METEO_BASE_URL
 
 params={
     "latitude": 18.2949307,

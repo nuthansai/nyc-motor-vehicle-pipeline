@@ -77,3 +77,21 @@ One entry per decision. Add the reason where one is marked `_add_`.
 
 - **Decision (Timezone):** Keep NYC crashes in `America/New_York` at staging; keep Open-Meteo weather in `UTC` at staging, then convert weather to `America/New_York` (DST-aware) in the intermediate layer before joining.
 - **Why:** UTC provides unambiguous hourly timestamps without Daylight Saving Time (DST) jumps. Per Open-Meteo documentation, requesting a named timezone applies a single fixed offset across the entire date range and ignores DST transitions, which would mislabel hours. Converting both sources to UTC in staging ensures collision and weather timestamps share a single consistent reference.
+
+## 2026-11-26: ELT paradigm with 2 flattened tables in `raw`
+
+- **Decision:** Follow an ELT approach with exactly 2 flattened source-aligned tables in the `raw` layer (`raw.mvc_crashes` and `raw.weather_hourly`), deferring star-schema splitting and transformations to `stg`, `int`, and `mart`.
+- **Why:** Keeps raw ingestion decoupled from business modeling, mirrors how `dlt` lands one flattened table per API resource in S3/Athena later, and keeps source data unmodified for auditing.
+
+## 2026-11-26: Primary keys and ingestion metadata in `raw`
+
+- **Decision:**
+  - **`raw.mvc_crashes`:** Use `collision_id` as the natural primary key.
+  - **`raw.weather_hourly`:** Manually add a `borough` column during Python flattening (mapped by coordinate request order to uppercase Socrata names: `MANHATTAN`, `BROOKLYN`, `QUEENS`, `BRONX`, `STATEN ISLAND`) and use `(borough, time_utc)` as a composite primary key.
+  - **Audit column:** Add `_ingested_at` to both `raw` tables.
+- **Why:** Open-Meteo multi-coordinate responses omit `location_id` on the first element (`index 0`) and return `1–4` on the rest without borough names. Adding `borough` explicitly and enforcing `PRIMARY KEY (borough, time_utc)` guarantees grain uniqueness (`1 row per borough per UTC hour`) and supports idempotent upserts alongside `collision_id`.
+
+## 2026-11-26: Weather code lookup table
+
+- **Decision:** Create a separate static lookup/seed table mapping WMO `weather_code` integers to human-readable descriptions and grouped weather condition categories (e.g., `Clear`, `Fog`, `Rain`, `Snow`).
+- **Why:** Keeps `raw.weather_hourly` raw while providing clean, human-readable weather labels and condition buckets for downstream analytics and QuickSight dashboards.

@@ -1,4 +1,5 @@
 import json
+from urllib import response
 import requests
 from nyc_motor_vehicle_pipeline.config import OPEN_METEO_BASE_URL, DATA_DIR
 
@@ -30,13 +31,14 @@ def download_nyc_boroughs():
         raise
 
     except requests.exceptions.HTTPError as e:
-        if weather_response.status_code == 401:
+        status_code = e.response.status_code if e.response is not None else None
+        if status_code == 401:
             print("failed due to unauthorized api key")
             raise
-        elif weather_response.status_code == 403:
+        elif status_code == 403:
             print("Access forbidden. Stopping extraction.")
             raise
-        elif weather_response.status_code == 429:
+        elif status_code == 429:
             print("API rate limit reached")
             raise
 
